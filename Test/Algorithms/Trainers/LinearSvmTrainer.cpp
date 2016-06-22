@@ -48,14 +48,7 @@
 #include <shark/Data/Dataset.h>
 #include <shark/Models/Kernels/LinearKernel.h>
 
-#include <shark/Algorithms/Trainers/McSvmOVATrainer.h>
-#include <shark/Algorithms/Trainers/McSvmMMRTrainer.h>
-#include <shark/Algorithms/Trainers/McSvmCSTrainer.h>
-#include <shark/Algorithms/Trainers/McSvmWWTrainer.h>
-#include <shark/Algorithms/Trainers/McSvmLLWTrainer.h>
-#include <shark/Algorithms/Trainers/McSvmADMTrainer.h>
-#include <shark/Algorithms/Trainers/McSvmATSTrainer.h>
-#include <shark/Algorithms/Trainers/McSvmATMTrainer.h>
+#include <shark/Algorithms/Trainers/CSvmTrainer.h>
 
 
 using namespace shark;
@@ -92,21 +85,18 @@ BOOST_AUTO_TEST_CASE( MCSVM_TRAINER_TEST )
 	double C = 1.0;
 	LinearKernel<CompressedRealVector> kernel;
 
-	AbstractLinearSvmTrainer<CompressedRealVector>* linearTrainer[8];
-	AbstractSvmTrainer<CompressedRealVector, unsigned int>* nonlinearTrainer[8];
-
-#define TRAINER(index, kind) \
-	linearTrainer[index] = new LinearMcSvm##kind##Trainer<CompressedRealVector>(C); \
-	nonlinearTrainer[index] = new McSvm##kind##Trainer<CompressedRealVector>(&kernel, C,false);
-
-	TRAINER(0, MMR);
-	TRAINER(1, OVA);
-	TRAINER(2, WW);
-	TRAINER(3, CS);
-	TRAINER(4, LLW);
-	TRAINER(5, ADM);
-	TRAINER(6, ATS);
-	TRAINER(7, ATM);
+	// There are 9 trainers for multi-class SVMs in Shark which can train with or without bias:
+	std::pair<std::string,McSvm> machines[9] ={
+		{"OVA", McSvm::OVA},
+		{"CS", McSvm::CS},
+		{"WW",McSvm::WW},
+		{"LLW",McSvm::LLW},
+		{"ADM",McSvm::ADM},
+		{"ATS",McSvm::ATS},
+		{"ATM",McSvm::ATM},
+		{"MMR",McSvm::MMR},
+		{"Reinforced",McSvm::ReinforcedSvm},
+	};
 
 	for (unsigned int run=0; run<10; run++)
 	{
@@ -127,17 +117,22 @@ BOOST_AUTO_TEST_CASE( MCSVM_TRAINER_TEST )
 		}
 		LabeledData<CompressedRealVector, unsigned int> dataset = createLabeledDataFromRange(input, target);
 
-		for (size_t i=0; i<8; i++)
+		for (size_t i=0; i<9; i++)
 		{
-			cout << "  testing " << linearTrainer[i]->name() << " vs. " << nonlinearTrainer[i]->name() << endl;
+			cout << "  testing linear vs non-linear " << machines[i].first << " -machine"<< endl;
+			LinearCSvmTrainer<CompressedRealVector> linearTrainer(C);
+			CSvmTrainer<CompressedRealVector> nonlinearTrainer(&kernel, C,false);
+			linearTrainer.setMcSvmType(machines[i].second);
+			nonlinearTrainer.setMcSvmType(machines[i].second);
+			
 
 			// train machine with two trainers
 			LinearClassifier<CompressedRealVector> linear;
-			linearTrainer[i]->stoppingCondition().minAccuracy = MAX_KKT_VIOLATION;
-			linearTrainer[i]->train(linear, dataset);
+			linearTrainer.stoppingCondition().minAccuracy = MAX_KKT_VIOLATION;
+			linearTrainer.train(linear, dataset);
 			KernelClassifier<CompressedRealVector> nonlinear;
-			nonlinearTrainer[i]->stoppingCondition().minAccuracy = MAX_KKT_VIOLATION;
-			nonlinearTrainer[i]->train(nonlinear, dataset);
+			nonlinearTrainer.stoppingCondition().minAccuracy = MAX_KKT_VIOLATION;
+			nonlinearTrainer.train(nonlinear, dataset);
 
 			// extract weight matrices
 			RealMatrix linear_w = linear.decisionFunction().matrix();

@@ -34,20 +34,19 @@
 //===========================================================================
 
 
-#ifndef SHARK_ALGORITHMS_MCSVMWWTRAINER_H
-#define SHARK_ALGORITHMS_MCSVMWWTRAINER_H
+#ifndef SHARK_ALGORITHMS_TRAINERS_MCSVM_MCSVMWWTRAINER_H
+#define SHARK_ALGORITHMS_TRAINERS_MCSVM_MCSVMWWTRAINER_H
 
 
 #include <shark/Algorithms/Trainers/AbstractSvmTrainer.h>
 #include <shark/Algorithms/QP/QpMcDecomp.h>
 #include <shark/Algorithms/QP/QpMcBoxDecomp.h>
-#include <shark/Algorithms/QP/QpMcLinear.h>
 
 #include <shark/LinAlg/KernelMatrix.h>
 #include <shark/LinAlg/PrecomputedMatrix.h>
 #include <shark/LinAlg/CachedMatrix.h>
 
-namespace shark {
+namespace shark { namespace detail{
 
 
 ///
@@ -246,38 +245,5 @@ public:
 	}
 };
 
-
-template <class InputType>
-class LinearMcSvmWWTrainer : public AbstractLinearSvmTrainer<InputType>
-{
-public:
-	typedef AbstractLinearSvmTrainer<InputType> base_type;
-
-	LinearMcSvmWWTrainer(double C, bool unconstrained = false) 
-	: AbstractLinearSvmTrainer<InputType>(C, unconstrained)
-	{ }
-
-	/// \brief From INameable: return the class name.
-	std::string name() const
-	{ return "LinearMcSvmWWTrainer"; }
-
-	void train(LinearClassifier<InputType>& model, const LabeledData<InputType, unsigned int>& dataset)
-	{
-		std::size_t dim = inputDimension(dataset);
-		std::size_t classes = numberOfClasses(dataset);
-
-		QpMcLinearWW<InputType> solver(dataset, dim, classes);
-		RealMatrix w = solver.solve(this->C(), this->stoppingCondition(), &this->solutionProperties(), this->verbosity() > 0);
-		model.decisionFunction().setStructure(w);
-	}
-};
-
-
-// shorthands for unified naming scheme; we resort to #define
-// statements since old c++ does not support templated typedefs
-#define McSvmRDSTrainer McSvmWWTrainer
-#define LinearMcSvmRDSTrainer LinearMcSvmWWTrainer
-
-
-}
+}}
 #endif

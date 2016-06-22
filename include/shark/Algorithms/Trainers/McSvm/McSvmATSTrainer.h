@@ -34,20 +34,19 @@
 //===========================================================================
 
 
-#ifndef SHARK_ALGORITHMS_MCSVMATSTRAINER_H
-#define SHARK_ALGORITHMS_MCSVMATSTRAINER_H
+#ifndef SHARK_ALGORITHMS_TRAINERS_MCSVM_MCSVMATSTRAINER_H
+#define SHARK_ALGORITHMS_TRAINERS_MCSVM_MCSVMATSTRAINER_H
 
 
 #include <shark/Algorithms/Trainers/AbstractSvmTrainer.h>
 #include <shark/Algorithms/QP/QpMcBoxDecomp.h>
-#include <shark/Algorithms/QP/QpMcLinear.h>
 
 #include <shark/LinAlg/KernelMatrix.h>
 #include <shark/LinAlg/CachedMatrix.h>
 #include <shark/LinAlg/PrecomputedMatrix.h>
 
 
-namespace shark {
+namespace shark { namespace detail{
 
 
 ///
@@ -225,30 +224,5 @@ public:
 };
 
 
-template <class InputType>
-class LinearMcSvmATSTrainer : public AbstractLinearSvmTrainer<InputType>
-{
-public:
-	typedef AbstractLinearSvmTrainer<InputType> base_type;
-
-	LinearMcSvmATSTrainer(double C, bool unconstrained = false)
-	: AbstractLinearSvmTrainer<InputType>(C, unconstrained){ }
-
-	/// \brief From INameable: return the class name.
-	std::string name() const
-	{ return "LinearMcSvmATSTrainer"; }
-
-	void train(LinearClassifier<InputType>& model, const LabeledData<InputType, unsigned int>& dataset)
-	{
-		std::size_t dim = inputDimension(dataset);
-		std::size_t classes = numberOfClasses(dataset);
-
-		QpMcLinearATS<InputType> solver(dataset, dim, classes);
-		RealMatrix w = solver.solve(this->C(), this->stoppingCondition(), &this->solutionProperties(), this->verbosity() > 0);
-		model.decisionFunction().setStructure(w);
-	}
-};
-
-
-}
+}}
 #endif
